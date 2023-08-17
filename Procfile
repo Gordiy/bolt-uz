@@ -1,0 +1,1 @@
+web gunicorn bolt_uz.wsgi:application --log-file -
