@@ -20,10 +20,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         :param validated_data: validated data.
         :return: user instance.
         """
-        return  BoltUser.objects.create_user(
+        return BoltUser.objects.create_user(
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             email=validated_data['email'],
             username=validated_data['email'],  # Use email as username
             password=validated_data['password']
         )
+
+
+class UserLoginSerializer(serializers.Serializer):
+    """Serializer for logged in users."""
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
