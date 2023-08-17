@@ -3,9 +3,12 @@ from django.contrib.auth import authenticate
 from django.http import HttpRequest, HttpResponse
 from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-from .serializers import UserLoginSerializer, UserRegistrationSerializer
+from .serializers import (FacebookSocialAuthSerializer,
+                          GoogleSocialAuthSerializer, UserLoginSerializer,
+                          UserRegistrationSerializer)
 
 
 class UserLoginView(generics.CreateAPIView):
@@ -39,3 +42,55 @@ class UserLoginView(generics.CreateAPIView):
 class UserRegistrationView(generics.CreateAPIView):
     """Registration view."""
     serializer_class = UserRegistrationSerializer
+
+
+class FacebookSocialAuthView(GenericAPIView):
+
+    serializer_class = FacebookSocialAuthSerializer
+
+    def post(self, request):
+        """
+        POST with "auth_token"
+
+        Send an access token as from facebook to get user information
+        """
+
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = ((serializer.validated_data)['auth_token'])
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class FacebookSocialAuthView(GenericAPIView):
+
+    serializer_class = FacebookSocialAuthSerializer
+
+    def post(self, request):
+        """
+        POST with "auth_token"
+
+        Send an access token as from facebook to get user information
+        """
+
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = ((serializer.validated_data)['auth_token'])
+        return Response(data, status=status.HTTP_200_OK)
+
+class GoogleSocialAuthView(GenericAPIView):
+
+    serializer_class = GoogleSocialAuthSerializer
+
+    def post(self, request):
+        """
+
+        POST with "auth_token"
+
+        Send an idtoken as from google to get user information
+
+        """
+
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = ((serializer.validated_data)['auth_token'])
+        return Response(data, status=status.HTTP_200_OK)
