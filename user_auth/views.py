@@ -77,6 +77,7 @@ class FacebookSocialAuthView(GenericAPIView):
         data = ((serializer.validated_data)['auth_token'])
         return Response(data, status=status.HTTP_200_OK)
 
+
 class GoogleSocialAuthView(GenericAPIView):
 
     serializer_class = GoogleSocialAuthSerializer
