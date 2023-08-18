@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'oauth2_provider',
     'social_django',
 
-    'user_auth'
+    'user_auth',
+    'coupons'
 ]
 
 MIDDLEWARE = [
