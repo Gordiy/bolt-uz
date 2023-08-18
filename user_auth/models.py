@@ -13,6 +13,7 @@ class BoltUser(AbstractUser):
     first_name = models.CharField(max_length=MAX_LENGTH['FIRST_NAME'])
     last_name = models.CharField(max_length=MAX_LENGTH['LAST_NAME'])
     email = models.EmailField(unique=True)
+    distance = models.PositiveIntegerField(default=0)
 
     def __str__(self) -> str:
         """String representation of user instance."""
