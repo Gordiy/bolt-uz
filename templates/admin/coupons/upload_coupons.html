@@ -1,0 +1,104 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+    <div id="content-main">
+        <div>
+            <form action="." method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% if form %}
+                    <div>
+                        {{ form.excel_file }}
+                    </div>
+                    <button type="submit">Upload XLS</button>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if errors %}
+            <div>Errors:</div>
+            {% for error in errors %}
+                <div>
+                    {{ error }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% if info %}
+            <div>
+                Information:
+            </div>
+            {% for info_item in info %}
+                <div>
+                    {{ info_item }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% if message %}
+            <br>
+            <div>
+                <b>{{ message }}</b>
+            </div>
+            <div>
+                {% for instance in  list_instances %}
+                    <div>
+                        {{ instance }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    {% if help_info %}
+        <div id="card">
+            {% for region in help_info.regions %}
+                <div>
+                    {{ region.name_uk }}
+                </div>
+            {% endfor %}
+        </div>
+        <div>
+            {% for town in help_info.cities %}
+                <div>
+                    {{ town.name_uk }}
+                </div>
+            {% endfor %}
+        </div>
+        <div>
+            <ul>
+                <li>
+                    Якщо точка продажу вже є в системі - вона буде оновлена даними з файлу
+                </li>
+                <li>
+                    Якщо точки продажу немає в системі - вона буде створена з даними з файлу
+                </li>
+                <li>
+                    Видалення точок продажу відбувається мануально (позначивши точку продажу чек-боксом у загальному списку точок та обравши дію "Видалити вибрані точки"
+                </li>
+            </ul>
+        </div>
+        <div>
+            <b>Типи:</b>
+            <ul>
+            {% for code, value in help_info.types.items %}
+                <li>
+                    <div>
+                        {{ code }} ({{ value }})
+                    </div>
+                </LI>
+            {% endfor %}
+            </ul>
+        </div>
+        <div>
+            <br>
+            <b>Statuses:</b>
+            <ul>
+            {% for code, value in help_info.pos_states.items %}
+                 <li>
+                    <div>
+                        {{ code }} ({{ value }})
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}
