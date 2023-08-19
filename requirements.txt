@@ -25,6 +25,7 @@ django-redis==5.2.0
 django-rest-framework-social-oauth2==1.1.0
 django-timezone-field==5.1
 djangorestframework==3.14.0
+debugpy==1.5.1
 facebook-sdk==3.1.0
 gunicorn==20.1.0
 idna==3.4
@@ -60,3 +61,4 @@ google-api-python-client==1.12.1
 google-auth==1.21.2
 google-auth-httplib2==0.0.4
 googleapis-common-protos==1.52.0
+xlrd==2.0.1

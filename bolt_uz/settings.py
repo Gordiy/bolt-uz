@@ -74,7 +74,6 @@ AUTHENTICATION_BACKENDS = {
 
 SOCIAL_AUTH_FACEBOOK_KEY = os.getenv('SOCIAL_AUTH_FACEBOOK_KEY', 309456571440984)
 SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv('SOCIAL_AUTH_FACEBOOK_SECRET', '768173840ee81837e4256a8fa7cc0f29')
-print(f"\n\nSOCIAL_AUTH_FACEBOOK_KEY: {SOCIAL_AUTH_FACEBOOK_KEY} \n\n")
 
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email']
 
@@ -90,7 +89,7 @@ ROOT_URLCONF = 'bolt_uz.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
