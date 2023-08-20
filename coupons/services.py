@@ -1,4 +1,5 @@
 """Services for coupons app."""
+import requests
 from datetime import datetime
 from typing import Union
 
@@ -19,6 +20,10 @@ from user_auth.models import BoltUser
 
 from .logger import ExcelLogger
 from .utils import is_float, is_integer
+from googlemaps import Client
+from django.conf import settings
+from translate import Translator
+from bs4 import BeautifulSoup
 
 
 class CouponService:
@@ -270,3 +275,51 @@ class ExcelParserService:
                         [cell.value if hasattr(cell, 'value') else cell for cell in row])))
             
         return objects_
+
+
+class CheckRouteService:
+    """Train route availability check service."""
+    def check_route(self, origin: str, destination: str) -> None or ValidationError:
+        """
+        Check if current route exists.
+        
+        :param origin: start.
+        :param destination: finish.
+        """
+        tranlated_origin = self._translate_settlement_to_english(origin).lower()
+        tranlated_destination = self._translate_settlement_to_english(destination).lower()
+        
+        html_page = self._get_page(tranlated_origin, tranlated_destination)
+
+        soup = BeautifulSoup(html_page, 'html.parser')
+        
+        train_src = '/img/only_trains.png'
+        electron_src = '/img/only_electr.png'
+
+        rows = soup.find_all('img')
+        filtered_rows = list(filter(lambda img: img.attrs.get('src') == train_src or img.attrs.get('src') == electron_src, rows))
+
+        if not filtered_rows:
+            raise ValidationError(detail='Route does not exists.', code=HTTP_400_BAD_REQUEST)
+
+    @staticmethod
+    def _get_page(origin: str, destination: str) -> str:
+        """
+        Get poizdato page.
+
+        :param origin: start.
+        :param destination: finish.
+        """
+        url = f'{settings.BASE_POIZDATO_URL}{origin}--{destination}/'
+        return requests.get(url).text
+
+    @staticmethod
+    def _translate_settlement_to_english(settlement: str) -> str:
+        """
+        Translate settlement to English.
+
+        :param settlement: settlement.
+        :return: translated settlement.
+        """
+        translator = Translator(from_lang='Ukrainian', to_lang='English')
+        return translator.translate(settlement)
