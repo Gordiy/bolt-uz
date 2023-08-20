@@ -2,8 +2,11 @@
 from datetime import datetime
 from typing import Union
 
+from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models.query import QuerySet
+from googlemaps import Client
+from googlemaps.exceptions import ApiError
 from rest_framework.exceptions import ValidationError
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from xlrd import open_workbook, xldate_as_tuple
@@ -270,3 +273,62 @@ class ExcelParserService:
                         [cell.value if hasattr(cell, 'value') else cell for cell in row])))
             
         return objects_
+
+
+class CalculateDistanceService:
+    """Service for calculating the distance between settlements."""
+    def __init__(self) -> None:
+        """Initialize google maps client."""
+        self.gmaps = Client(key=settings.GOOGL_MAPS_API_KEY)
+
+    def calculate_distance(self, origin: str, destination: str) -> int or None:
+        """
+        Calculate distance.
+        
+        :param origin: start.
+        :param destination: finish.
+        :return: distance if the direction is found, or None.
+        """
+        try:
+            train_distance = self.calculate_train_distance(origin, destination)
+
+            return train_distance if train_distance else self.calculate_driving_distance(origin, destination)
+        except ApiError as error:
+            raise ValidationError(detail=error.message, code=HTTP_400_BAD_REQUEST)
+
+    def calculate_train_distance(self, origin: str, destination: str) -> int or None:
+        """
+        Calculate train distance.
+        
+        :param origin: start.
+        :param destination: finish.
+        :return: distance if the direction is found, or None.
+        """
+        directions = self.gmaps.directions(origin, destination, mode='transit', transit_mode='train')
+        return self.get_distance(directions)
+
+    def calculate_driving_distance(self, origin: str, destination: str):
+        """
+        Calculate driving distance.
+        
+        :param origin: start.
+        :param destination: finish.
+        :return: distance if the direction is found, or None.
+        """
+        directions = self.gmaps.directions(origin, destination, mode='driving')
+
+        return self.get_distance(directions)
+        
+    @staticmethod
+    def get_distance(directions: dict) -> int or None:
+        """
+        Get distance.
+        
+        :param directions: gmaps return value.
+        :return: distance if the direction is found, or None.
+        """
+        one_kilometer_in_meters = 1000
+        if directions and len(directions) > 0:
+            route = directions[0]['legs'][0]
+            distance = int(route['distance']['value'] / one_kilometer_in_meters)
+            return distance
