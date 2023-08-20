@@ -1,10 +1,12 @@
 """Services for coupons app."""
-import requests
 from datetime import datetime
 from typing import Union
 
+from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models.query import QuerySet
+from googlemaps import Client
+from googlemaps.exceptions import ApiError
 from rest_framework.exceptions import ValidationError
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from xlrd import open_workbook, xldate_as_tuple
@@ -20,10 +22,6 @@ from user_auth.models import BoltUser
 
 from .logger import ExcelLogger
 from .utils import is_float, is_integer
-from googlemaps import Client
-from django.conf import settings
-from translate import Translator
-from bs4 import BeautifulSoup
 
 
 class CouponService:
@@ -277,49 +275,60 @@ class ExcelParserService:
         return objects_
 
 
-class CheckRouteService:
-    """Train route availability check service."""
-    def check_route(self, origin: str, destination: str) -> None or ValidationError:
+class CalculateDistanceService:
+    """Service for calculating the distance between settlements."""
+    def __init__(self) -> None:
+        """Initialize google maps client."""
+        self.gmaps = Client(key=settings.GOOGL_MAPS_API_KEY)
+
+    def calculate_distance(self, origin: str, destination: str) -> int or None:
         """
-        Check if current route exists.
+        Calculate distance.
         
         :param origin: start.
         :param destination: finish.
+        :return: distance if the direction is found, or None.
         """
-        tranlated_origin = self._translate_settlement_to_english(origin).lower()
-        tranlated_destination = self._translate_settlement_to_english(destination).lower()
-        
-        html_page = self._get_page(tranlated_origin, tranlated_destination)
+        try:
+            train_distance = self.calculate_train_distance(origin, destination)
 
-        soup = BeautifulSoup(html_page, 'html.parser')
-        
-        train_src = '/img/only_trains.png'
-        electron_src = '/img/only_electr.png'
+            return train_distance if train_distance else self.calculate_driving_distance(origin, destination)
+        except ApiError as error:
+            raise ValidationError(detail=error.message, code=HTTP_400_BAD_REQUEST)
 
-        rows = soup.find_all('img')
-        filtered_rows = list(filter(lambda img: img.attrs.get('src') == train_src or img.attrs.get('src') == electron_src, rows))
-
-        if not filtered_rows:
-            raise ValidationError(detail='Route does not exists.', code=HTTP_400_BAD_REQUEST)
-
-    @staticmethod
-    def _get_page(origin: str, destination: str) -> str:
+    def calculate_train_distance(self, origin: str, destination: str) -> int or None:
         """
-        Get poizdato page.
-
+        Calculate train distance.
+        
         :param origin: start.
         :param destination: finish.
+        :return: distance if the direction is found, or None.
         """
-        url = f'{settings.BASE_POIZDATO_URL}{origin}--{destination}/'
-        return requests.get(url).text
+        directions = self.gmaps.directions(origin, destination, mode='transit', transit_mode='train')
+        return self.get_distance(directions)
 
+    def calculate_driving_distance(self, origin: str, destination: str):
+        """
+        Calculate driving distance.
+        
+        :param origin: start.
+        :param destination: finish.
+        :return: distance if the direction is found, or None.
+        """
+        directions = self.gmaps.directions(origin, destination, mode='driving')
+
+        return self.get_distance(directions)
+        
     @staticmethod
-    def _translate_settlement_to_english(settlement: str) -> str:
+    def get_distance(directions: dict) -> int or None:
         """
-        Translate settlement to English.
-
-        :param settlement: settlement.
-        :return: translated settlement.
+        Get distance.
+        
+        :param directions: gmaps return value.
+        :return: distance if the direction is found, or None.
         """
-        translator = Translator(from_lang='Ukrainian', to_lang='English')
-        return translator.translate(settlement)
+        one_kilometer_in_meters = 1000
+        if directions and len(directions) > 0:
+            route = directions[0]['legs'][0]
+            distance = int(route['distance']['value'] / one_kilometer_in_meters)
+            return distance
