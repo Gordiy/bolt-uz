@@ -348,16 +348,16 @@ class StationRecognitionService:
         result_lower = [word.lower() for word in result]
 
         if not result_lower:
-            raise ValidationError(detail=StationRecognitionErrors.EMPTY_IMAGE, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=StationRecognitionErrors.EMPTY_IMAGE.value, code=HTTP_400_BAD_REQUEST)
 
         try:
             departure = result_lower.index('відправлення')
             appointment = result_lower.index('призначення')
         except ValueError:
-            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD.value, code=HTTP_400_BAD_REQUEST)
 
         if not departure or not appointment:
-            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD.value, code=HTTP_400_BAD_REQUEST)
 
         return {
             'origin': result[departure+2],
@@ -380,6 +380,6 @@ class StationRecognitionService:
         """Save ticket to database."""
         tickets = Ticket.objects.filter(origin=origin, destination=destination, unique_number=number)
         if tickets:
-            raise ValidationError(detail=StationRecognitionErrors.TICKET_ALREADY_USED, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=StationRecognitionErrors.TICKET_ALREADY_USED.value, code=HTTP_400_BAD_REQUEST)
 
-        Ticket.objects.create(image=self.image, origin=origin, destination=destination, unique_number=number, user=user)
+        Ticket.objects.create(image=self.image, origin=origin, destination=destination, unique_number=number, user=user).save()
