@@ -1,12 +1,16 @@
 """Services for coupons app."""
+import os
 from datetime import datetime
+from random import randint
 from typing import Union
 
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models.query import QuerySet
+from easyocr import Reader
 from googlemaps import Client
 from googlemaps.exceptions import ApiError
+from PIL import Image
 from rest_framework.exceptions import ValidationError
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from xlrd import open_workbook, xldate_as_tuple
@@ -332,3 +336,46 @@ class CalculateDistanceService:
             route = directions[0]['legs'][0]
             distance = int(route['distance']['value'] / one_kilometer_in_meters)
             return distance
+
+
+class StationRecognitionService:
+    """Service to recognite station from photo."""
+    def __init__(self) -> None:
+        self.roi_coordinates_origin = (298, 252, 775, 295)
+        self.roi_coordinates_destination = (304, 281, 775, 326)
+
+    def recognite(self, photo_path: str):
+        """Recognite origin and destination from photo."""
+        reader = Reader(['uk'])
+
+        origin_path = self.crop_ticket(photo_path, self.roi_coordinates_origin)
+        destination_path = self.crop_ticket(photo_path, self.roi_coordinates_destination)
+
+        origin = reader.readtext(origin_path, detail=0)
+        destination = reader.readtext(destination_path, detail=0)
+
+        self.remove_temp_images(origin_path)
+        self.remove_temp_images(destination_path)
+        return {
+            'origin': origin,
+            'destination': destination
+        }
+
+    @staticmethod
+    def crop_ticket(path: str, roi_coordinates: tuple) -> str:
+        """Crop ticket for reading settlements from photo."""
+        image = Image.open(path)
+        roi_image = image.crop(roi_coordinates)
+        random_val = randint(100000, 500000)
+        generated_path = f'/croped_images/image_{random_val}.png'
+        roi_image.save(generated_path)
+
+        return generated_path
+
+    @staticmethod
+    def remove_temp_images(path: str):
+        """Remove temporary images."""
+        try:
+            os.remove(path)
+        except OSError as e:
+            print(f"Error removing {path}: {e}")
