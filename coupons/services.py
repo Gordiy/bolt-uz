@@ -17,7 +17,7 @@ from xlrd.sheet import Sheet
 from xlrd.xldate import XLDateAmbiguous
 
 from coupons.constants import DISTANCE_INDEX, PRICE_AND_DISTANCE
-from coupons.enums import CouponsErrors
+from coupons.enums import CouponsErrors, StationRecognitionErrors
 from coupons.models import Coupon, Ticket
 from user_auth.models import BoltUser
 
@@ -344,17 +344,20 @@ class StationRecognitionService:
         """Recognite origin and destination from photo."""
         reader = Reader(['uk'])
 
-        result = reader.readtext(self.image.file, detail=0)
+        result = reader.readtext(self.image.file.getvalue(), detail=0)
         result_lower = [word.lower() for word in result]
 
         if not result_lower:
-            raise ValidationError(detail='The image is empty.', code=HTTP_400_BAD_REQUEST)
-        
-        departure = result_lower.index('відправлення')
-        appointment = result_lower.index('призначення')
+            raise ValidationError(detail=StationRecognitionErrors.EMPTY_IMAGE, code=HTTP_400_BAD_REQUEST)
+
+        try:
+            departure = result_lower.index('відправлення')
+            appointment = result_lower.index('призначення')
+        except ValueError:
+            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD, code=HTTP_400_BAD_REQUEST)
 
         if not departure or not appointment:
-            raise ValidationError(detail='The image does not contain departure or appointment.', code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD, code=HTTP_400_BAD_REQUEST)
 
         return {
             'origin': result[departure+2],
@@ -377,6 +380,6 @@ class StationRecognitionService:
         """Save ticket to database."""
         tickets = Ticket.objects.filter(origin=origin, destination=destination, unique_number=number)
         if tickets:
-            raise ValidationError(detail='Ticket already used.', code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=StationRecognitionErrors.TICKET_ALREADY_USED, code=HTTP_400_BAD_REQUEST)
 
         Ticket.objects.create(image=self.image, origin=origin, destination=destination, unique_number=number, user=user)
