@@ -26,5 +26,5 @@ class BoltUser(AbstractUser):
         :param distance: coupon distance.
         :return: None.
         """
-        self.distance = self.distance - distance
+        self.distance = self.distance + distance
         self.save()
