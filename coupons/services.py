@@ -1,7 +1,5 @@
 """Services for coupons app."""
-import os
 from datetime import datetime
-from random import randint
 from typing import Union
 
 from django.conf import settings
@@ -10,7 +8,6 @@ from django.db.models.query import QuerySet
 from easyocr import Reader
 from googlemaps import Client
 from googlemaps.exceptions import ApiError
-from PIL import Image
 from rest_framework.exceptions import ValidationError
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from xlrd import open_workbook, xldate_as_tuple
@@ -21,7 +18,7 @@ from xlrd.xldate import XLDateAmbiguous
 
 from coupons.constants import DISTANCE_INDEX, PRICE_AND_DISTANCE
 from coupons.enums import CouponsErrors
-from coupons.models import Coupon
+from coupons.models import Coupon, Ticket
 from user_auth.models import BoltUser
 
 from .logger import ExcelLogger
@@ -340,42 +337,46 @@ class CalculateDistanceService:
 
 class StationRecognitionService:
     """Service to recognite station from photo."""
-    def __init__(self) -> None:
-        self.roi_coordinates_origin = (298, 252, 775, 295)
-        self.roi_coordinates_destination = (304, 281, 775, 326)
+    def __init__(self, image: InMemoryUploadedFile) -> None:
+        self.image = image
 
-    def recognite(self, photo_path: str):
+    def recognite(self) -> dict:
         """Recognite origin and destination from photo."""
         reader = Reader(['uk'])
 
-        origin_path = self.crop_ticket(photo_path, self.roi_coordinates_origin)
-        destination_path = self.crop_ticket(photo_path, self.roi_coordinates_destination)
+        result = reader.readtext(self.image.file, detail=0)
+        result_lower = [word.lower() for word in result]
 
-        origin = reader.readtext(origin_path, detail=0)
-        destination = reader.readtext(destination_path, detail=0)
+        if not result_lower:
+            raise ValidationError(detail='The image is empty.', code=HTTP_400_BAD_REQUEST)
+        
+        departure = result_lower.index('відправлення')
+        appointment = result_lower.index('призначення')
 
-        self.remove_temp_images(origin_path)
-        self.remove_temp_images(destination_path)
+        if not departure or not appointment:
+            raise ValidationError(detail='The image does not contain departure or appointment.', code=HTTP_400_BAD_REQUEST)
+
         return {
-            'origin': origin,
-            'destination': destination
+            'origin': result[departure+2],
+            'destination': result[appointment+2],
+            'ticket_number': self.get_ticket_number(result)
         }
 
     @staticmethod
-    def crop_ticket(path: str, roi_coordinates: tuple) -> str:
-        """Crop ticket for reading settlements from photo."""
-        image = Image.open(path)
-        roi_image = image.crop(roi_coordinates)
-        random_val = randint(100000, 500000)
-        generated_path = f'/croped_images/image_{random_val}.png'
-        roi_image.save(generated_path)
+    def get_ticket_number(words: list) -> str:
+        """
+        Get the ticket number from the words that was read.
+        
+        :param words: list of words.
+        :return: words.
+        """
+        indexes_of_ticket_number = (2, 3)
+        return words[indexes_of_ticket_number[0]] + words[indexes_of_ticket_number[1]]
 
-        return generated_path
+    def save_ticket(self, origin: str, destination: str, number: str, user: BoltUser) -> None:
+        """Save ticket to database."""
+        tickets = Ticket.objects.filter(origin=origin, destination=destination, unique_number=number)
+        if tickets:
+            raise ValidationError(detail='Ticket already used.', code=HTTP_400_BAD_REQUEST)
 
-    @staticmethod
-    def remove_temp_images(path: str):
-        """Remove temporary images."""
-        try:
-            os.remove(path)
-        except OSError as e:
-            print(f"Error removing {path}: {e}")
+        Ticket.objects.create(image=self.image, origin=origin, destination=destination, unique_number=number, user=user)
