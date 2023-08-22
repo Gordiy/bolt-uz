@@ -28,7 +28,7 @@ class Ticket(models.Model):
         'DESTINATION': 30,
         'UNIQUE_NUMBER': 60
     }
-    image = models.ImageField(upload_to='images/')
+    file = models.FileField(upload_to='tickets/')
     origin = models.CharField(verbose_name='Origin', max_length=MAX_LENGTH['ORIGIN'], blank=True, null=True)
     destination = models.CharField(verbose_name='Destination', max_length=MAX_LENGTH['DESTINATION'], blank=True, null=True)
     unique_number = models.CharField(verbose_name='Unique number', max_length=MAX_LENGTH['UNIQUE_NUMBER'], unique=True, null=True)
