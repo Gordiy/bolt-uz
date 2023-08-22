@@ -424,8 +424,11 @@ class PDFStationRecognitionService(StationRecognitionService):
 
         indices_containing_departure_and_appointment = [index for index, word in enumerate(words) if DEPARTURE in word.lower() or APPOINTMENT in word.lower()]
 
-        return {
-            'origin': words[indices_containing_departure_and_appointment[0] + 2],
-            'destination': words[indices_containing_departure_and_appointment[1] + 2],
-            'ticket_number': words[12]
-        }
+        try:
+            return {
+                'origin': words[indices_containing_departure_and_appointment[0] + 2],
+                'destination': words[indices_containing_departure_and_appointment[1] + 2],
+                'ticket_number': words[12]
+            }
+        except:
+            raise ValidationError(detail='Ticket info not found.', code=HTTP_400_BAD_REQUEST)
