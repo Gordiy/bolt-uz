@@ -1,4 +1,5 @@
 """Views for coupons app."""
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.http import HttpRequest, HttpResponse
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -9,9 +10,11 @@ from rest_framework.status import HTTP_400_BAD_REQUEST
 from rest_framework.viewsets import GenericViewSet
 
 from .models import Coupon
-from .serializers import CouponSerializer, TicketImageSerializer
+from .serializers import CouponSerializer, TicketSerializer
 from .services import (CalculateDistanceService, CouponService,
-                       StationRecognitionService)
+                       ImageStationRecognitionService,
+                       PDFStationRecognitionService)
+from .utils import convert_to_temporary_uploaded_file
 
 
 class CouponViewSet(DestroyModelMixin, GenericViewSet):
@@ -44,20 +47,32 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
         :param request: http request.
         :return: http response.
         """
-        serializer = TicketImageSerializer(data=request.data)
+        serializer = TicketSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        station_recognition_service = StationRecognitionService(serializer.validated_data.get('image'))
-        result = station_recognition_service.recognite()
-        try:
-            origin = result.get('origin').lower()
-            destination = result.get('destination').lower()
-        except IndexError:
-            raise ValidationError(detail='Settlements are not recognized.', code=HTTP_400_BAD_REQUEST)
 
-        distance = CalculateDistanceService().calculate_distance(origin, destination)
-        user = request.user
-        
-        station_recognition_service.save_ticket(origin, destination, result.get('ticket_number'), user)
-        user.update_distance(distance)
+        file = serializer.validated_data.get('file')
+        if isinstance(file, InMemoryUploadedFile):
+            file = convert_to_temporary_uploaded_file(file)
+
+        if '.pdf' in file.name:
+            station_recognition_service = PDFStationRecognitionService(file)
+        else:
+            station_recognition_service = ImageStationRecognitionService(file)
+        result = station_recognition_service.recognite()
+
+        distance = 0
+        for data in result:
+            try:
+                origin = data.get('origin').lower()
+                destination = data.get('destination').lower()
+            except IndexError:
+                raise ValidationError(detail='Settlements are not recognized.', code=HTTP_400_BAD_REQUEST)
+
+            ticket_distance = CalculateDistanceService().calculate_distance(origin, destination)
+            distance += ticket_distance
+            user = request.user
+
+            station_recognition_service.save_ticket(origin, destination, data.get('ticket_number'), user)
+            user.update_distance(ticket_distance)
 
         return Response(data={'distance': distance})
