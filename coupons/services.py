@@ -1,9 +1,12 @@
 """Services for coupons app."""
+from abc import abstractmethod
 from datetime import datetime
 from typing import Union
 
+import PyPDF2
 from django.conf import settings
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import (InMemoryUploadedFile,
+                                            TemporaryUploadedFile)
 from django.db.models.query import QuerySet
 from easyocr import Reader
 from googlemaps import Client
@@ -17,10 +20,11 @@ from xlrd.sheet import Sheet
 from xlrd.xldate import XLDateAmbiguous
 
 from coupons.constants import DISTANCE_INDEX, PRICE_AND_DISTANCE
-from coupons.enums import CouponsErrors, StationRecognitionErrors
+from coupons.enums import CouponsErrors, ImageStationRecognitionErrors
 from coupons.models import Coupon, Ticket
 from user_auth.models import BoltUser
 
+from .constants import APPOINTMENT, DEPARTURE
 from .logger import ExcelLogger
 from .utils import is_float, is_integer
 
@@ -336,34 +340,56 @@ class CalculateDistanceService:
 
 
 class StationRecognitionService:
-    """Service to recognite station from photo."""
-    def __init__(self, image: InMemoryUploadedFile) -> None:
-        self.image = image
+    """Service to recognite station."""
+    def __init__(self, file: TemporaryUploadedFile) -> None:
+        self.file = file
 
-    def recognite(self) -> dict:
-        """Recognite origin and destination from photo."""
+    @abstractmethod
+    def recognite(self) -> list:
+        """
+        Recognite origin, destination and ticket number from photo.
+        
+        :return: [{
+            'origin': start,
+            'destination': finish,
+            'ticket_number': uniquer ticket number
+        }, ...]
+        """
+
+    def save_ticket(self, origin: str, destination: str, number: str, user: BoltUser) -> None:
+        """Save ticket to database."""
+        tickets = Ticket.objects.filter(origin=origin, destination=destination, unique_number=number)
+        if tickets:
+            raise ValidationError(detail=ImageStationRecognitionErrors.TICKET_ALREADY_USED.value, code=HTTP_400_BAD_REQUEST)
+
+        Ticket.objects.create(file=self.file, origin=origin, destination=destination, unique_number=number, user=user).save()
+
+
+class ImageStationRecognitionService(StationRecognitionService):
+    """Service to recognite station from photo."""
+    def recognite(self) -> list:
         reader = Reader(['uk'])
 
-        result = reader.readtext(self.image.file.getvalue(), detail=0)
+        result = reader.readtext(self.file.temporary_file_path(), detail=0)
         result_lower = [word.lower() for word in result]
 
         if not result_lower:
-            raise ValidationError(detail=StationRecognitionErrors.EMPTY_IMAGE.value, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=ImageStationRecognitionErrors.EMPTY_IMAGE.value, code=HTTP_400_BAD_REQUEST)
 
         try:
-            departure = result_lower.index('відправлення')
-            appointment = result_lower.index('призначення')
+            departure = result_lower.index(DEPARTURE)
+            appointment = result_lower.index(APPOINTMENT)
         except ValueError:
-            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD.value, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=ImageStationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD.value, code=HTTP_400_BAD_REQUEST)
 
         if not departure or not appointment:
-            raise ValidationError(detail=StationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD.value, code=HTTP_400_BAD_REQUEST)
+            raise ValidationError(detail=ImageStationRecognitionErrors.DEPARTMENT_OR_APPOINTMENT_NOT_FOUD.value, code=HTTP_400_BAD_REQUEST)
 
-        return {
+        return [{
             'origin': result[departure+2],
             'destination': result[appointment+2],
             'ticket_number': self.get_ticket_number(result)
-        }
+        }]
 
     @staticmethod
     def get_ticket_number(words: list) -> str:
@@ -376,10 +402,30 @@ class StationRecognitionService:
         indexes_of_ticket_number = (2, 3)
         return words[indexes_of_ticket_number[0]] + words[indexes_of_ticket_number[1]]
 
-    def save_ticket(self, origin: str, destination: str, number: str, user: BoltUser) -> None:
-        """Save ticket to database."""
-        tickets = Ticket.objects.filter(origin=origin, destination=destination, unique_number=number)
-        if tickets:
-            raise ValidationError(detail=StationRecognitionErrors.TICKET_ALREADY_USED.value, code=HTTP_400_BAD_REQUEST)
 
-        Ticket.objects.create(image=self.image, origin=origin, destination=destination, unique_number=number, user=user).save()
+class PDFStationRecognitionService(StationRecognitionService):
+    """Service to recognite station from PDF file."""
+    def recognite(self) -> list:
+        reader = PyPDF2.PdfReader(self.file.temporary_file_path())
+        tickets = []
+
+        for page in reader.pages:
+            ticket = self._get_ticket_info(page)
+            tickets.append(ticket)
+
+        return tickets
+    
+    @staticmethod
+    def _get_ticket_info(page) -> dict:
+        """Get ticket info."""
+        text = page.extract_text()
+        text = text.replace('\n', '')
+        words = text.split(' ')
+
+        indices_containing_departure_and_appointment = [index for index, word in enumerate(words) if DEPARTURE in word.lower() or APPOINTMENT in word.lower()]
+
+        return {
+            'origin': words[indices_containing_departure_and_appointment[0] + 2],
+            'destination': words[indices_containing_departure_and_appointment[1] + 2],
+            'ticket_number': words[12]
+        }
