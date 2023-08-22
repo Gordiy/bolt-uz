@@ -9,13 +9,14 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from rest_framework.viewsets import GenericViewSet
 
+from .constants import IMAGE_EXTENTSIONS
 from .models import Coupon
 from .serializers import CouponSerializer, TicketSerializer
 from .services import (CalculateDistanceService, CouponService,
                        ImageStationRecognitionService,
                        PDFStationRecognitionService)
-from .utils import convert_to_temporary_uploaded_file, has_image_extension
-from .constants import IMAGE_EXTENTSIONS
+from .utils import (convert_to_temporary_uploaded_file,
+                    deepcopy_temporary_uploaded_file, has_image_extension)
 
 
 class CouponViewSet(DestroyModelMixin, GenericViewSet):
@@ -73,6 +74,7 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
             distance += ticket_distance
             user = request.user
 
+            station_recognition_service.file = deepcopy_temporary_uploaded_file(file)
             station_recognition_service.save_ticket(origin, destination, data.get('ticket_number'), user)
             user.update_distance(ticket_distance)
 
