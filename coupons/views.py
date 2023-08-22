@@ -60,7 +60,7 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
         elif has_image_extension(file.name):
             station_recognition_service = ImageStationRecognitionService(file)
         else:
-            raise ValidationError(detail=f'File format is not supported. Use {", ".join(IMAGE_EXTENTSIONS)} or .pdf.')
+            raise ValidationError(detail=f'File format is not supported. Use {", ".join(IMAGE_EXTENTSIONS)} or .pdf.', code=HTTP_400_BAD_REQUEST)
 
         result = station_recognition_service.recognite()
 
