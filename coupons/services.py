@@ -1,4 +1,5 @@
 """Services for coupons app."""
+import re
 from abc import abstractmethod
 from datetime import datetime
 from typing import Union
@@ -356,6 +357,17 @@ class StationRecognitionService:
         }, ...]
         """
 
+    @staticmethod
+    def get_ticket_number(text: str) -> str:
+        """Find ticket number from string."""
+        pattern = r'[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}'
+        matches = re.findall(pattern, text.replace(' ', ''))
+
+        if matches:
+            return matches[0]
+
+        raise ValidationError(detail='Ticket number not found.', code=HTTP_400_BAD_REQUEST)
+
     def save_ticket(self, origin: str, destination: str, number: str, user: BoltUser) -> None:
         """Save ticket to database."""
         tickets = Ticket.objects.filter(origin=origin, destination=destination, unique_number=number)
@@ -388,19 +400,19 @@ class ImageStationRecognitionService(StationRecognitionService):
         return [{
             'origin': result[departure+2],
             'destination': result[appointment+2],
-            'ticket_number': self.get_ticket_number(result)
+            'ticket_number': self.get_ticket_number("".join(result))
         }]
 
-    @staticmethod
-    def get_ticket_number(words: list) -> str:
-        """
-        Get the ticket number from the words that was read.
+    # @staticmethod
+    # def get_ticket_number(words: list) -> str:
+    #     """
+    #     Get the ticket number from the words that was read.
         
-        :param words: list of words.
-        :return: words.
-        """
-        indexes_of_ticket_number = (2, 3)
-        return words[indexes_of_ticket_number[0]] + words[indexes_of_ticket_number[1]]
+    #     :param words: list of words.
+    #     :return: words.
+    #     """
+    #     indexes_of_ticket_number = (2, 3)
+    #     return words[indexes_of_ticket_number[0]] + words[indexes_of_ticket_number[1]]
 
 
 class PDFStationRecognitionService(StationRecognitionService):
@@ -415,8 +427,7 @@ class PDFStationRecognitionService(StationRecognitionService):
 
         return tickets
     
-    @staticmethod
-    def _get_ticket_info(page) -> dict:
+    def _get_ticket_info(self, page) -> dict:
         """Get ticket info."""
         text = page.extract_text()
         text = text.replace('\n', '')
@@ -424,11 +435,12 @@ class PDFStationRecognitionService(StationRecognitionService):
 
         indices_containing_departure_and_appointment = [index for index, word in enumerate(words) if DEPARTURE in word.lower() or APPOINTMENT in word.lower()]
 
+        ticket_number = self.get_ticket_number(text)
         try:
             return {
                 'origin': words[indices_containing_departure_and_appointment[0] + 2],
                 'destination': words[indices_containing_departure_and_appointment[1] + 2],
-                'ticket_number': words[12]
+                'ticket_number': ticket_number
             }
         except:
             raise ValidationError(detail='Ticket info not found.', code=HTTP_400_BAD_REQUEST)
