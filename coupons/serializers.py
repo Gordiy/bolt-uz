@@ -10,8 +10,8 @@ class CouponSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'price')
 
 
-class TicketImageSerializer(serializers.ModelSerializer):
-    """Ticket image serializer."""
+class TicketSerializer(serializers.ModelSerializer):
+    """Ticket file serializer."""
     class Meta:
         model = Ticket
-        fields = ['image']
+        fields = ['file']
