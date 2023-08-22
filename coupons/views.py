@@ -62,11 +62,8 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
 
         distance = 0
         for data in result:
-            try:
-                origin = data.get('origin').lower()
-                destination = data.get('destination').lower()
-            except IndexError:
-                raise ValidationError(detail='Settlements are not recognized.', code=HTTP_400_BAD_REQUEST)
+            origin = data.get('origin').lower()
+            destination = data.get('destination').lower()
 
             ticket_distance = CalculateDistanceService().calculate_distance(origin, destination)
             distance += ticket_distance
