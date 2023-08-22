@@ -6,7 +6,7 @@ from django.shortcuts import render
 
 from .forms import FileImportForm
 from .logger import ExcelLogger
-from .models import Coupon
+from .models import Coupon, Ticket
 from .services import ExcelParserService
 
 
@@ -49,3 +49,4 @@ class CouponAdmin(admin.ModelAdmin):
         return my_urls + urls
 
 admin.site.register(Coupon, CouponAdmin)
+admin.site.register(Ticket)

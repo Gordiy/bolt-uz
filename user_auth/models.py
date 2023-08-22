@@ -18,3 +18,13 @@ class BoltUser(AbstractUser):
     def __str__(self) -> str:
         """String representation of user instance."""
         return f'{self.first_name} {self.last_name}'
+    
+    def update_distance(self, distance: str):
+        """
+        Update user distance.
+        
+        :param distance: coupon distance.
+        :return: None.
+        """
+        self.distance = self.distance + distance
+        self.save()
