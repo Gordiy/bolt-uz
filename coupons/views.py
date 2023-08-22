@@ -14,7 +14,8 @@ from .serializers import CouponSerializer, TicketSerializer
 from .services import (CalculateDistanceService, CouponService,
                        ImageStationRecognitionService,
                        PDFStationRecognitionService)
-from .utils import convert_to_temporary_uploaded_file
+from .utils import convert_to_temporary_uploaded_file, has_image_extension
+from .constants import IMAGE_EXTENTSIONS
 
 
 class CouponViewSet(DestroyModelMixin, GenericViewSet):
@@ -56,8 +57,11 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
 
         if '.pdf' in file.name:
             station_recognition_service = PDFStationRecognitionService(file)
-        else:
+        elif has_image_extension(file.name):
             station_recognition_service = ImageStationRecognitionService(file)
+        else:
+            raise ValidationError(detail=f'File format is not supported. Use {", ".join(IMAGE_EXTENTSIONS)} or .pdf.')
+
         result = station_recognition_service.recognite()
 
         distance = 0
