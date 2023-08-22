@@ -10,7 +10,7 @@ class CouponsErrors(Enum):
     NO_COUPONS_AVAILIABLE = 'No coupons available'
 
 
-class StationRecognitionErrors(Enum):
+class ImageStationRecognitionErrors(Enum):
     """Enum describes error messages for station recognition service."""
     EMPTY_IMAGE = 'The image is empty.'
     DEPARTMENT_OR_APPOINTMENT_NOT_FOUD = 'The image does not contain departure or appointment.'
