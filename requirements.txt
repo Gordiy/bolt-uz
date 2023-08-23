@@ -1,6 +1,6 @@
 amqp==5.1.1
 asgiref==3.7.2
-backports.zoneinfo==0.2.1
+backports.zoneinfo==0.2.1;python_version<"3.9"
 billiard==4.1.0
 cachetools==4.2.4
 celery==5.3.1
