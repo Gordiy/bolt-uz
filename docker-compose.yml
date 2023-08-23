@@ -1,5 +1,23 @@
 version: '3'
 services:
+  db:
+    build: 
+      context: ./docker/postgresql
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_DB={POSTGRES_DB}
+      - POSTGRES_USER={POSTGRES_USER}
+      - POSTGRES_PASSWORD={POSTGRES_PASSWORD}
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    expose:
+      - 5432
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./docker/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -10,3 +28,6 @@ services:
       - "5678:5678"
     env_file:
       - .env
+
+volumes:
+  postgres_data:
