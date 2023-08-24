@@ -35,31 +35,31 @@ services:
     env_file:
       - .env
 
-  # certbot:
-  #   image: certbot/certbot
-  #   container_name: certbot
-  #   volumes:
-  #     - /etc/letsencrypt:/etc/letsencrypt
-  #     - ./docker/lib/letsencrypt:/var/lib/letsencrypt
-  #     - ./docker/certbot:/var/www/certbot
-  #   command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz
-  #   env_file:
-  #     - .env
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - ./docker/lib/letsencrypt:/var/lib/letsencrypt
+      - ./docker/certbot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz
+    env_file:
+      - .env
 
-  # nginx:
-  #   build:
-  #     context: ./docker/nginx
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"  
-  #   volumes:
-  #     - ./logs/nginx/:/var/log/nginx/
-  #     - ./docker/nginx/conf.d:/etc/nginx/conf.d
-  #     - ./docker/certbot:/var/www/certbot
-  #   depends_on:
-  #     - web
-  #     - certbot
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"  
+    volumes:
+      - ./logs/nginx/:/var/log/nginx/
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/certbot:/var/www/certbot
+    depends_on:
+      - web
+      - certbot
 
 volumes:
   postgres_data:
