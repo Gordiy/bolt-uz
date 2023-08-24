@@ -46,8 +46,11 @@ services:
       - ./logs/nginx/:/var/log/nginx/
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/certbot:/var/www/certbot
+      - nginx_certbot:/etc/nginx/conf.d
     depends_on:
       - web
 
 volumes:
   postgres_data:
+  nginx_certbot:
+  certbot_webroot:
