@@ -42,7 +42,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
       - ./docker/lib/letsencrypt:/var/lib/letsencrypt
       - ./docker/certbot:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz
+    command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz -m gord.rushynets@gmail.com
     env_file:
       - .env
 
