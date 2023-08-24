@@ -35,18 +35,19 @@ services:
     env_file:
       - .env
 
-  # nginx:
-  #   build:
-  #     context: ./docker/nginx
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"  
-  #   volumes:
-  #     - ./logs/nginx/:/var/log/nginx/
-  #     - ./docker/nginx/conf.d:/etc/nginx/conf.d
-  #   depends_on:
-  #     - web
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"  
+    volumes:
+      - ./logs/nginx/:/var/log/nginx/
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/certbot:/var/www/certbot
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
