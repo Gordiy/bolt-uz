@@ -35,16 +35,16 @@ services:
     env_file:
       - .env
 
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-      - ./docker/lib/letsencrypt:/var/lib/letsencrypt
-      - ./docker/certbot:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz -m gord.rushynets@gmail.com
-    env_file:
-      - .env
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: certbot
+  #   volumes:
+  #     - /etc/letsencrypt:/etc/letsencrypt
+  #     - ./docker/lib/letsencrypt:/var/lib/letsencrypt
+  #     - ./docker/certbot:/var/www/certbot
+  #   command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz -m gord.rushynets@gmail.com
+  #   env_file:
+  #     - .env
 
   nginx:
     build:
