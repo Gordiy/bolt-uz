@@ -40,7 +40,7 @@ services:
     container_name: certbot
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
-      - /var/lib/letsencrypt:/var/lib/letsencrypt
+      - ./docker/lib/letsencrypt:/var/lib/letsencrypt
       - ./docker/certbot:/var/www/certbot
     command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz
     env_file:
