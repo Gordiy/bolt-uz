@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import os
-import dj_database_url
-import django_heroku
+# import dj_database_url
+# import django_heroku
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     'oauth2_provider',
     'social_django',
+    'corsheaders',
 
     'user_auth',
     'coupons'
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -61,6 +63,8 @@ MIDDLEWARE = [
 
     'social_django.middleware.SocialAuthExceptionMiddleware'
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -172,4 +176,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024
 
-django_heroku.settings(locals())
+# django_heroku.settings(locals())
