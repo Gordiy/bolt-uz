@@ -59,7 +59,7 @@ services:
       - ./docker/certbot:/var/www/certbot
     depends_on:
       - web
-      - certbot
+      # - certbot
 
 volumes:
   postgres_data:
