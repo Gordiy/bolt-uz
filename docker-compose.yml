@@ -26,8 +26,8 @@ services:
       && python manage.py makemigrations
       && python manage.py migrate
       && python manage.py collectstatic --noinput
-      && gunicorn --bind 0.0.0.0:8000 bolt_uz.wsgi:application"
-      # && python manage.py runserver 0.0.0.0:8000"
+      && python manage.py runserver 0.0.0.0:8000"
+      # && gunicorn --bind 0.0.0.0:8000 bolt_uz.wsgi:application"
     volumes:
       - .:/app
     ports:
@@ -36,31 +36,6 @@ services:
     env_file:
       - .env
 
-  # certbot:
-  #   image: certbot/certbot
-  #   container_name: certbot
-  #   volumes:
-  #     - /etc/letsencrypt:/etc/letsencrypt
-  #     - ./docker/lib/letsencrypt:/var/lib/letsencrypt
-  #     - ./docker/certbot:/var/www/certbot
-  #   command: certonly --webroot --webroot-path=/var/www/certbot -d bolt-uz.xyz -m gord.rushynets@gmail.com
-  #   env_file:
-  #     - .env
-
-  # nginx:
-  #   build:
-  #     context: ./docker/nginx
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"  
-  #   volumes:
-  #     - ./logs/nginx/:/var/log/nginx/
-  #     - ./docker/nginx/conf.d:/etc/nginx/conf.d
-  #     - ./docker/certbot:/var/www/certbot
-  #   depends_on:
-  #     - web
-      # - certbot
 
 volumes:
   postgres_data:
