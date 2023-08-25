@@ -25,9 +25,10 @@ services:
       sleep 30
       && python manage.py makemigrations
       && python manage.py migrate
+      && python manage.py create_initial_superuser
       && python manage.py collectstatic --noinput
-      && gunicorn --bind 0.0.0.0:8000 bolt_uz.wsgi:application"
-      # && python manage.py runserver 0.0.0.0:8000"
+      && python manage.py runserver 0.0.0.0:8000"
+      # && gunicorn --bind 0.0.0.0:8000 bolt_uz.wsgi:application"
     volumes:
       - .:/app
     ports:
