@@ -3,18 +3,19 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.http import HttpRequest, HttpResponse
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.mixins import DestroyModelMixin
+from rest_framework.mixins import DestroyModelMixin, RetrieveModelMixin
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from rest_framework.viewsets import GenericViewSet
 
 from .constants import IMAGE_EXTENTSIONS
-from .models import Coupon
-from .serializers import CouponSerializer, TicketSerializer
+from .models import Coupon, Ticket
+from .serializers import (CouponSerializer, TicketSerializer,
+                          TickeUploadFiletSerializer)
 from .services import (CalculateDistanceService, CouponService,
-                       ImageStationRecognitionService,
                        PDFStationRecognitionService)
+from .tasks import image_station_recognition
 from .utils import (convert_to_temporary_uploaded_file,
                     deepcopy_temporary_uploaded_file, has_image_extension)
 
@@ -41,6 +42,13 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
 
         return Response(serializer.data)
 
+
+class TicketViewSet(RetrieveModelMixin, GenericViewSet):
+    """Viewset to upload ticket."""
+    queryset = Ticket.objects.all()
+    permission_classes = [IsAuthenticated | IsAdminUser]
+    serializer_class = TicketSerializer
+
     @action(detail=False, methods=['POST'])
     def upload_ticket(self, request: HttpRequest) -> HttpResponse:
         """
@@ -49,8 +57,9 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
         :param request: http request.
         :return: http response.
         """
-        serializer = TicketSerializer(data=request.data)
+        serializer = TickeUploadFiletSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        user = request.user
 
         file = serializer.validated_data.get('file')
         if isinstance(file, InMemoryUploadedFile):
@@ -59,7 +68,10 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
         if '.pdf' in file.name:
             station_recognition_service = PDFStationRecognitionService(file)
         elif has_image_extension(file.name):
-            station_recognition_service = ImageStationRecognitionService(file)
+            ticket = Ticket.objects.create(file=file, unique_number=file.name, user=user)
+            image_station_recognition.apply_async(kwargs={"ticket_id": ticket.id})
+
+            return Response(data={'id': ticket.id})
         else:
             raise ValidationError(detail=f'File format is not supported. Use {", ".join(IMAGE_EXTENTSIONS)} or .pdf.', code=HTTP_400_BAD_REQUEST)
 
@@ -72,7 +84,6 @@ class CouponViewSet(DestroyModelMixin, GenericViewSet):
 
             ticket_distance = CalculateDistanceService().calculate_distance(origin, destination)
             distance += ticket_distance
-            user = request.user
 
             station_recognition_service.file = deepcopy_temporary_uploaded_file(file)
             station_recognition_service.save_ticket(origin, destination, data.get('ticket_number'), user)

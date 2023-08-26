@@ -375,7 +375,7 @@ class ImageStationRecognitionService(StationRecognitionService):
     def recognite(self) -> list:
         reader = Reader(['uk'])
 
-        result = reader.readtext(self.file.temporary_file_path(), detail=0)
+        result = reader.readtext(self.file.path, detail=0)
         result_lower = [word.lower() for word in result]
 
         if not result_lower:
