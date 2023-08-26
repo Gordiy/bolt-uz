@@ -26,16 +26,47 @@ services:
       && python manage.py makemigrations
       && python manage.py migrate
       && python manage.py collectstatic --noinput
-      && python manage.py runserver 0.0.0.0:8000"
-      # && gunicorn --bind 0.0.0.0:8000 bolt_uz.wsgi:application"
+      && gunicorn --bind 0.0.0.0:8000 bolt_uz.wsgi:application"
+      # && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
       - "5678:5678"
+    depends_on:
+      - worker
+      - redis
+      - db
+    links:
+      - redis:redis
     env_file:
       - .env
 
+  worker:
+    build: .
+    volumes:
+      - .:/app
+      - ./logs/celery/:/var/log/celery/
+    command: celery -A bolt_uz worker -E
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  redis:
+    build:
+      context: ./docker/redis
+      dockerfile: Dockerfile
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./docker/redis/redis_data:/data
+    expose:
+      - "6379"
+    ports:
+      - "6379:6379"
+    env_file:
+      - .env
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}"
 
 volumes:
   postgres_data:
