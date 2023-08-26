@@ -18,6 +18,7 @@ from .services import (CalculateDistanceService, CouponService,
 from .tasks import image_station_recognition
 from .utils import (convert_to_temporary_uploaded_file,
                     deepcopy_temporary_uploaded_file, has_image_extension)
+from django.db.utils import IntegrityError
 
 
 class CouponViewSet(DestroyModelMixin, GenericViewSet):
@@ -68,7 +69,10 @@ class TicketViewSet(RetrieveModelMixin, GenericViewSet):
         if '.pdf' in file.name:
             station_recognition_service = PDFStationRecognitionService(file)
         elif has_image_extension(file.name):
-            ticket = Ticket.objects.create(file=file, unique_number=file.name, user=user)
+            try:
+                ticket = Ticket.objects.create(file=file, unique_number=file.name, user=user)
+            except IntegrityError:
+                raise ValidationError(detail="Ticket already uploaded.", code=HTTP_400_BAD_REQUEST)
             image_station_recognition.apply_async(kwargs={"ticket_id": ticket.id})
 
             return Response(data={'id': ticket.id})

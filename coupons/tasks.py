@@ -1,12 +1,13 @@
-from celery import shared_task
 from rest_framework.exceptions import ValidationError
+
+from bolt_uz.celery import app
 
 from .models import Ticket
 from .services import CalculateDistanceService, ImageStationRecognitionService
 
 
 # TODO: create better solution for image station recognition.
-@shared_task
+@app.task
 def image_station_recognition(ticket_id: int) -> None:
     """Recognite image."""
     ticket = Ticket.objects.get(id=ticket_id)
