@@ -176,4 +176,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024
 
-# django_heroku.settings(locals())
+CELERY_BROKER_URL = f'redis://:{os.getenv("REDIS_PASSWORD")}@{os.getenv("REDIS_HOST")}:' \
+                    f'{os.getenv("REDIS_PORT")}/{os.getenv("REDIS_DB_CELERY_BROKER")}'
+CELERY_RESULT_BACKEND = f'redis://:{os.getenv("REDIS_PASSWORD")}@{os.getenv("REDIS_HOST")}:' \
+                        f'{os.getenv("REDIS_PORT")}/{os.getenv("REDIS_DB_CELERY_RESULT")}'
+
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_WORKER_SEND_TASK_EVENTS = os.getenv('CELERY_WORKER_SEND_TASK_EVENTS', default=True) == 'True'
+CELERY_TASK_SEND_SENT_EVENT = os.getenv('CELERY_TASK_SEND_SENT_EVENT', default=True) == 'True'
