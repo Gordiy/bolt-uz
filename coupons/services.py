@@ -413,16 +413,45 @@ class PDFStationRecognitionService(StationRecognitionService):
         """Get ticket info."""
         text = page.extract_text()
         text = text.replace('\n', '')
-        words = text.split(' ')
-
-        indices_containing_departure_and_appointment = [index for index, word in enumerate(words) if DEPARTURE in word.lower() or APPOINTMENT in word.lower()]
 
         ticket_number = self.get_ticket_number()
         try:
             return {
-                'origin': words[indices_containing_departure_and_appointment[0] + 2],
-                'destination': words[indices_containing_departure_and_appointment[1] + 2],
+                'origin': re.sub(r'\d', '', self._get_origin(text)),
+                'destination': re.sub(r'\d', '', self._get_destination(text)),
                 'ticket_number': ticket_number
             }
         except:
             raise ValidationError(detail='Ticket info not found.', code=HTTP_400_BAD_REQUEST)
+
+    def _get_origin(self, text: str) -> str:
+        """
+        Get origin from text.
+        
+        :param text: text from pdf file.
+        :return: origin.
+        """
+        departure = "відправлення"
+        train_car = "вагон"
+
+        return self.__get_point(text, departure, train_car)
+    
+    def _get_destination(self, text: str) -> str:
+        """
+        Get destination from text.
+        
+        :param text: text from pdf file.
+        :return: origin.
+        """
+        appointment = "призначення"
+        place = "місце"
+
+        return self.__get_point(text, appointment, place)
+    
+    @staticmethod
+    def __get_point(text: str, first_word: str, second_word: str) -> str:
+        """Get origin or destination."""
+        start_index = text.lower().index(first_word) + len(first_word)
+        end_index = text.lower().index(second_word)
+
+        return text[start_index: end_index].replace(' ', '')        
