@@ -412,17 +412,16 @@ class PDFStationRecognitionService(StationRecognitionService):
     def _get_ticket_info(self, page) -> dict:
         """Get ticket info."""
         text = page.extract_text()
-        text = text.replace('\n', '')
+        text = text.replace(' ', '')
 
         ticket_number = self.get_ticket_number()
-        try:
-            return {
-                'origin': re.sub(r'\d', '', self._get_origin(text)),
-                'destination': re.sub(r'\d', '', self._get_destination(text)),
-                'ticket_number': ticket_number
-            }
-        except:
-            raise ValidationError(detail='Ticket info not found.', code=HTTP_400_BAD_REQUEST)
+        
+        return {
+            'origin': re.sub(r'\d', '', self._get_origin(text)),
+            'destination': re.sub(r'\d', '', self._get_destination(text)),
+            'ticket_number': ticket_number
+        }
+
 
     def _get_origin(self, text: str) -> str:
         """
@@ -431,10 +430,18 @@ class PDFStationRecognitionService(StationRecognitionService):
         :param text: text from pdf file.
         :return: origin.
         """
-        departure = "відправлення"
-        train_car = "вагон"
+        first_pattern = r'відправлення\d{5,7}(.*?)вагон'
+        first_match = re.search(first_pattern, text, re.IGNORECASE)
 
-        return self.__get_point(text, departure, train_car)
+        second_pattern = r'відправлення\d{5,7}(.*?)поїзд'
+        second_match = re.search(second_pattern, text, re.IGNORECASE)
+
+        if first_match:
+            return first_match.group(1).lower().replace(' ',  '')
+        elif second_match:
+            return second_match.group(1).lower().replace(' ',  '')
+        else:
+            raise ValidationError(detail='Origin not found', code=HTTP_400_BAD_REQUEST)
     
     def _get_destination(self, text: str) -> str:
         """
@@ -443,15 +450,15 @@ class PDFStationRecognitionService(StationRecognitionService):
         :param text: text from pdf file.
         :return: origin.
         """
-        appointment = "призначення"
-        place = "місце"
+        first_pattern = r'призначення\d{5,7}(.*?)місце'
+        first_match = re.search(first_pattern, text, re.IGNORECASE)
 
-        return self.__get_point(text, appointment, place)
-    
-    @staticmethod
-    def __get_point(text: str, first_word: str, second_word: str) -> str:
-        """Get origin or destination."""
-        start_index = text.lower().index(first_word) + len(first_word)
-        end_index = text.lower().index(second_word)
+        second_pattern = r'призначення\d{5,7}(.*?)вагон'
+        second_match = re.search(second_pattern, text, re.IGNORECASE)
 
-        return text[start_index: end_index].replace(' ', '')        
+        if first_match:
+            return first_match.group(1).lower().replace(' ',  '')
+        elif second_match:
+            return second_match.group(1).lower().replace(' ',  '')
+        else:
+            raise ValidationError(detail='Destination not found', code=HTTP_400_BAD_REQUEST)
