@@ -410,6 +410,8 @@ class PDFStationRecognitionService(StationRecognitionService):
         text = page.extract_text()
         text = text.replace(' ', '').lower()
 
+        self._validate_date(text)
+
         ticket_number = self.get_ticket_number()
         
         return {
@@ -417,7 +419,6 @@ class PDFStationRecognitionService(StationRecognitionService):
             'destination': re.sub(r'\d', '', self._get_destination(text)),
             'ticket_number': ticket_number
         }
-
 
     def _get_origin(self, text: str) -> str:
         """
@@ -456,3 +457,16 @@ class PDFStationRecognitionService(StationRecognitionService):
             
             if match:
                 return match.group(1).lower().replace(' ',  '')
+
+    @staticmethod
+    def _validate_date(text: str):
+        """Check if the current year is 2023."""
+        pattern = r'\d{2}\.\d{2}\.\d{4}'
+        matches = re.findall(pattern, text)
+
+        if matches:
+            date = matches[0][-4:]
+            if date != '2023':
+                raise ValidationError(detail='Ticket year is not 2023.', code=HTTP_400_BAD_REQUEST)
+        else:
+            raise ValidationError(detail='Date not found.', code=HTTP_400_BAD_REQUEST)
