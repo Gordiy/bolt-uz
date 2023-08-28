@@ -412,7 +412,7 @@ class PDFStationRecognitionService(StationRecognitionService):
     def _get_ticket_info(self, page) -> dict:
         """Get ticket info."""
         text = page.extract_text()
-        text = text.replace(' ', '')
+        text = text.replace(' ', '').lower()
 
         ticket_number = self.get_ticket_number()
         
@@ -430,18 +430,13 @@ class PDFStationRecognitionService(StationRecognitionService):
         :param text: text from pdf file.
         :return: origin.
         """
-        first_pattern = r'відправлення\d{5,7}(.*?)вагон'
-        first_match = re.search(first_pattern, text, re.IGNORECASE)
+        patterns = [r'відправлення\d{5,7}(.*?)вагон', r'відправлення\d{5,7}(.*?)поїзд', r'від/from\d{5,7}(.*?)вагон/car']
 
-        second_pattern = r'відправлення\d{5,7}(.*?)поїзд'
-        second_match = re.search(second_pattern, text, re.IGNORECASE)
+        match = self.__match_patterns(patterns, text)
 
-        if first_match:
-            return first_match.group(1).lower().replace(' ',  '')
-        elif second_match:
-            return second_match.group(1).lower().replace(' ',  '')
-        else:
-            raise ValidationError(detail='Origin not found', code=HTTP_400_BAD_REQUEST)
+        if match: return match
+
+        raise ValidationError(detail='Origin not found', code=HTTP_400_BAD_REQUEST)
     
     def _get_destination(self, text: str) -> str:
         """
@@ -450,15 +445,18 @@ class PDFStationRecognitionService(StationRecognitionService):
         :param text: text from pdf file.
         :return: origin.
         """
-        first_pattern = r'призначення\d{5,7}(.*?)місце'
-        first_match = re.search(first_pattern, text, re.IGNORECASE)
+        patterns = [r'призначення\d{5,7}(.*?)місце', r'призначення\d{5,7}(.*?)вагон', r'до/to\d{5,7}(.*?)місце/place']
+        match = self.__match_patterns(patterns, text)
 
-        second_pattern = r'призначення\d{5,7}(.*?)вагон'
-        second_match = re.search(second_pattern, text, re.IGNORECASE)
-
-        if first_match:
-            return first_match.group(1).lower().replace(' ',  '')
-        elif second_match:
-            return second_match.group(1).lower().replace(' ',  '')
-        else:
-            raise ValidationError(detail='Destination not found', code=HTTP_400_BAD_REQUEST)
+        if match: return match
+            
+        raise ValidationError(detail='Destination not found', code=HTTP_400_BAD_REQUEST)
+    
+    @staticmethod
+    def __match_patterns(patterns: list, text: str) -> str or None:
+        """Match of patterns to text."""
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            
+            if match:
+                return match.group(1).lower().replace(' ',  '')
