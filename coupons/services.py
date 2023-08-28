@@ -75,12 +75,8 @@ class CouponService:
         """
         if distance >= PRICE_AND_DISTANCE[0][DISTANCE_INDEX] and distance <= PRICE_AND_DISTANCE[1][DISTANCE_INDEX]:
             return coupons.filter(distance=PRICE_AND_DISTANCE[0][DISTANCE_INDEX]).first()
-        elif distance >= PRICE_AND_DISTANCE[1][DISTANCE_INDEX] and distance <= PRICE_AND_DISTANCE[2][DISTANCE_INDEX]:
+        elif distance >= PRICE_AND_DISTANCE[1][DISTANCE_INDEX]:
             return coupons.filter(distance=PRICE_AND_DISTANCE[1][DISTANCE_INDEX]).first()
-        elif distance >= PRICE_AND_DISTANCE[2][DISTANCE_INDEX] and distance <= PRICE_AND_DISTANCE[3][DISTANCE_INDEX]:
-            return coupons.filter(distance=PRICE_AND_DISTANCE[2][DISTANCE_INDEX]).first()
-        elif distance >= PRICE_AND_DISTANCE[3][DISTANCE_INDEX]:
-            return coupons.filter(distance=PRICE_AND_DISTANCE[3][DISTANCE_INDEX]).first()
 
 
 class ExcelParserService:
