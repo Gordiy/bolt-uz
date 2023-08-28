@@ -50,13 +50,8 @@ class FacebookSocialAuthSerializer(serializers.Serializer):
 
         try:
             email = user_data['email']
-            name = user_data['name']
-            return register_social_user(
-                email=email,
-                name=name
-            )
-        except Exception as identifier:
-
+            return register_social_user(email=email)
+        except Exception:
             raise serializers.ValidationError(
                 'The token  is invalid or expired. Please login again.'
             )
@@ -74,13 +69,10 @@ class GoogleSocialAuthSerializer(serializers.Serializer):
                 'The token is invalid or expired. Please login again.'
             )
 
-        if user_data['aud'] != os.environ.get('GOOGLE_CLIENT_ID'):
+        if user_data['aud'] != os.environ.get('GOOGLE_SOCIAL_AUTH_CLIENT_ID'):
 
             raise AuthenticationFailed('oops, who are you?')
 
         email = user_data['email']
-        name = user_data['name']
-        provider = 'google'
 
-        return register_social_user(
-            provider=provider, email=email, name=name)
+        return register_social_user(request=self.context.get('request'), email=email)

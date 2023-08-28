@@ -1,52 +1,36 @@
-from django.contrib.auth import authenticate
-from user_auth.models import BoltUser
 import os
-import random
-from rest_framework.exceptions import AuthenticationFailed
+
+from django.contrib.auth import authenticate
+from rest_framework.exceptions import ValidationError
+from rest_framework.status import HTTP_400_BAD_REQUEST
+
+from user_auth.models import BoltUser
+from rest_framework.authtoken.models import Token
 
 
-def generate_username(name):
-
-    username = "".join(name.split(' ')).lower()
-    if not BoltUser.objects.filter(username=username).exists():
-        return username
-    else:
-        random_username = username + str(random.randint(0, 1000))
-        return generate_username(random_username)
-
-
-def register_social_user(provider, email, name):
+def register_social_user(request, email):
     filtered_user_by_email = BoltUser.objects.filter(email=email)
 
     if filtered_user_by_email.exists():
+        registered_user = authenticate(
+            request=request, username=email, password=os.environ.get('SOCIAL_SECRET', 'social_secret'))
+        
+        if not registered_user:
+            raise ValidationError(detail='Login with email and password.', code=HTTP_400_BAD_REQUEST)
 
-        if provider == filtered_user_by_email[0].auth_provider:
-
-            registered_user = authenticate(
-                email=email, password=os.environ.get('SOCIAL_SECRET', 'hello_world'))
-
-            return {
-                'username': registered_user.username,
-                'email': registered_user.email,
-                'tokens': registered_user.tokens()}
-
-        else:
-            raise AuthenticationFailed(
-                detail='Please continue your login using ' + filtered_user_by_email[0].auth_provider)
+        token, created = Token.objects.get_or_create(user=registered_user)
+        return {'token': token.key}
 
     else:
         user = {
-            'username': generate_username(name), 'email': email,
-            'password': os.environ.get('SOCIAL_SECRET', 'hello_world')}
+            'username': email, 'email': email,
+            'password': os.environ.get('SOCIAL_SECRET', 'social_secret')}
         user = BoltUser.objects.create_user(**user)
         user.is_verified = True
-        user.auth_provider = provider
         user.save()
 
         new_user = authenticate(
-            email=email, password=os.environ.get('SOCIAL_SECRET', 'hello_world'))
-        return {
-            'email': new_user.email,
-            'username': new_user.username,
-            'tokens': new_user.tokens()
-        }
+            username=email, password=os.environ.get('SOCIAL_SECRET', 'social_secret'))
+        
+        token, created = Token.objects.get_or_create(user=new_user)
+        return {'token': token.key}
