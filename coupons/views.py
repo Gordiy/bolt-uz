@@ -1,5 +1,8 @@
 """Views for coupons app."""
+from random import randint
+
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.db.utils import IntegrityError
 from django.http import HttpRequest, HttpResponse
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -18,7 +21,6 @@ from .services import (CalculateDistanceService, CouponService,
 from .tasks import image_station_recognition
 from .utils import (convert_to_temporary_uploaded_file,
                     deepcopy_temporary_uploaded_file, has_image_extension)
-from django.db.utils import IntegrityError
 
 
 class CouponViewSet(DestroyModelMixin, GenericViewSet):
@@ -82,6 +84,7 @@ class TicketViewSet(RetrieveModelMixin, GenericViewSet):
         result = station_recognition_service.recognite()
 
         distance = 0
+        already_saved = False
         for data in result:
             origin = data.get('origin').lower()
             destination = data.get('destination').lower()
@@ -90,7 +93,11 @@ class TicketViewSet(RetrieveModelMixin, GenericViewSet):
             distance += ticket_distance
 
             station_recognition_service.file = deepcopy_temporary_uploaded_file(file)
-            station_recognition_service.save_ticket(origin, destination, data.get('ticket_number'), user)
+            if not already_saved:
+                station_recognition_service.save_ticket(origin, destination, data.get('ticket_number'), user)
+                already_saved = True
+            else:
+                station_recognition_service.save_ticket(origin, destination, f'{data.get("ticket_number")}+{randint(10000000, 90000000)}', user)
             user.update_distance(ticket_distance)
 
         return Response(data={'distance': distance})
