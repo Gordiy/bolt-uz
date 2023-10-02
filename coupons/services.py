@@ -412,12 +412,12 @@ class PDFStationRecognitionService(StationRecognitionService):
 
         self._validate_date(text)
 
-        ticket_number = self.get_ticket_number()
+        ticket_number = self.get_ticket_number(text)
         
         return {
             'origin': re.sub(r'\d', '', self._get_origin(text)),
             'destination': re.sub(r'\d', '', self._get_destination(text)),
-            'ticket_number': ticket_number
+            'ticket_number': ticket_number,
         }
 
     def _get_origin(self, text: str) -> str:
@@ -427,8 +427,9 @@ class PDFStationRecognitionService(StationRecognitionService):
         :param text: text from pdf file.
         :return: origin.
         """
-        patterns = [r'відправлення\d{5,7}(.*?)вагон', r'відправлення\d{5,7}(.*?)поїзд', r'від/from\d{5,7}(.*?)вагон/car']
+        text = text.replace('\n', '')
 
+        patterns = [r'відправлення\d{5,7}(.*?)вагон', r'відправлення\d{5,7}(.*?)поїзд', r'від/from\d{5,7}(.*?)вагон/car']
         match = self.__match_patterns(patterns, text)
 
         if match: return match
@@ -442,6 +443,8 @@ class PDFStationRecognitionService(StationRecognitionService):
         :param text: text from pdf file.
         :return: origin.
         """
+        text = text.replace('\n', '')
+
         patterns = [r'призначення\d{5,7}(.*?)місце', r'призначення\d{5,7}(.*?)вагон', r'до/to\d{5,7}(.*?)місце/place']
         match = self.__match_patterns(patterns, text)
 
@@ -449,6 +452,50 @@ class PDFStationRecognitionService(StationRecognitionService):
             
         raise ValidationError(detail='Destination not found', code=HTTP_400_BAD_REQUEST)
     
+    def get_ticket_number(self, text: str) -> str:
+        """
+        Find ticket number from string.
+        
+        :param text: text from pdf file.
+        :return: ticket number.
+        """
+        text = text.replace('\n', '')
+
+        patterns = [r'посадочнийдокументboardingdocument(.*?)пн', r'посадочнийдокументboardingdocument(.*?)фн',
+                    r'посадочнийдокументboardingdocument(.*?)зн', r'посадочнийдокументboardingdocument(.*?)фк',
+                    r'посадочнийдокумент(.*?)пн', r'посадочнийдокумент(.*?)пн',
+                    r'посадочнийдокумент(.*?)зн', r'посадочнийдокумент(.*?)фк',]
+
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+
+            if match and len(match.group(1)) > 5:
+                grouped_match = match.group(1)
+
+                if len(grouped_match) > 23:
+                    grouped_match = grouped_match[-23:]
+
+                return f"{grouped_match.lower().replace(' ',  '')}+{self.__get_ticket_date(text)}"
+
+        raise ValidationError(detail='Ticket number not found', code=HTTP_400_BAD_REQUEST)
+    
+    @staticmethod
+    def __get_ticket_date(text: str) -> str or None:
+        """
+        Find ticket date from string.
+        
+        :param text: text from pdf file.
+        :return: ticket date.
+        """
+        patterns = [r'цейпосадочнийдокументєпідставоюдляпроїзду(.*?)прізвище',
+                    r'цейпосадочнийдокументєпідставоюдляпроїздуthisboardingdocumentisthebasisforpassage(.*?)familyname']
+
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+
+            if match:
+                return match.group(1).lower().replace(' ',  '')
+
     @staticmethod
     def __match_patterns(patterns: list, text: str) -> str or None:
         """Match of patterns to text."""
