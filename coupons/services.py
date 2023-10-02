@@ -73,10 +73,8 @@ class CouponService:
         :param coupons: list of availiable coupons.
         :return: coupon if found else None.
         """
-        if distance >= PRICE_AND_DISTANCE[0][DISTANCE_INDEX] and distance <= PRICE_AND_DISTANCE[1][DISTANCE_INDEX]:
+        if distance >= PRICE_AND_DISTANCE[0][DISTANCE_INDEX]:
             return coupons.filter(distance=PRICE_AND_DISTANCE[0][DISTANCE_INDEX]).first()
-        elif distance >= PRICE_AND_DISTANCE[1][DISTANCE_INDEX]:
-            return coupons.filter(distance=PRICE_AND_DISTANCE[1][DISTANCE_INDEX]).first()
 
 
 class ExcelParserService:
